@@ -26,16 +26,6 @@ public class CsvParser {
 
     public CsvParser() {
         this.formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss:SSS");
-//        this.formatter =  DateTimeFormatter.o
-//        this.formatter = new DateTimeFormatterBuilder()
-//
-//                .appendPattern("dd-MM-yyyy HH:mm:ss")
-//
-//                .optionalStart()
-//                .appendPattern(":")
-//                .appendFraction(ChronoField.MILLI_OF_SECOND, 1, 3, false)
-//                .optionalEnd()
-//                .toFormatter();
     }
 
     /**

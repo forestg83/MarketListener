@@ -1,48 +1,47 @@
 package com.gft.bodus.marketsubscriber;
 
-import com.gft.bodus.marketsubscriber.client.HttpComponent;
+import com.gft.bodus.marketsubscriber.client.HttpService;
 import com.gft.bodus.marketsubscriber.model.PriceUpdate;
 import com.gft.bodus.marketsubscriber.parsers.CsvParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.util.List;
+import java.util.Collection;
+import static java.util.List.of;
 
-import static com.gft.bodus.marketsubscriber.model.MarketPair.*;
+import static com.gft.bodus.marketsubscriber.model.MarketPair.EUR_JPY;
+import static com.gft.bodus.marketsubscriber.model.MarketPair.EUR_USD;
+import static com.gft.bodus.marketsubscriber.model.MarketPair.GBP_USD;
 import static java.time.LocalDateTime.of;
 import static java.time.temporal.ChronoUnit.MILLIS;
-import static java.util.Comparator.comparing;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 public class MarketListenerImplTest {
 
-    @Mock
-    private HttpComponent httpComponent;
-
-    @Captor
-    private ArgumentCaptor<PriceUpdate> priceUptadeCaptor;
+    @Spy
+    HttpService httpService;
 
     @BeforeEach
     public void setup() {
-        reset(httpComponent);
+        Mockito.reset(httpService);
     }
 
     @Test
-    @DisplayName("Should send send the latest prices.")
-    public void shouldSendTheLatestPrices() {
+    @DisplayName("Should send send adjusted prices.")
+    public void shouldSendAdjustedPrices() {
         // given
-        doNothing().when(httpComponent).pushPriceUpdate(priceUptadeCaptor.capture());
-        MarketListenerImpl marketListener = new MarketListenerImpl(new CsvParser(), httpComponent, new BigDecimal("0.001"));
+        MarketListenerImpl marketListener = new MarketListenerImpl(new CsvParser(), httpService, new BigDecimal("0.001"));
 
         // when
         marketListener.onMessage("""
@@ -54,44 +53,19 @@ public class MarketListenerImplTest {
                 """);
 
         // then
-        verify(httpComponent, times(3)).pushPriceUpdate(any());
-        List<PriceUpdate> priceUpdates = priceUptadeCaptor.getAllValues()
-                .stream()
-                .sorted(comparing(PriceUpdate::id))
-                .toList();
-
-        assertEquals(new PriceUpdate(106, EUR_USD, new BigDecimal("1.0989000"), new BigDecimal("1.2012000"),
+        Collection<PriceUpdate> publishedData = httpService.getAllPrices();
+        assertEquals(3, publishedData.size());
+        verify(httpService, times(5)).pushPriceUpdate(any(PriceUpdate.class));
+        assertTrue(publishedData.containsAll(of(
+                new PriceUpdate(106, EUR_USD, new BigDecimal("1.0989000"), new BigDecimal("1.2012000"),
                         of(2020, 6, 1, 12, 01, 01).plus(001, MILLIS)),
-                priceUpdates.get(0));
 
-        assertEquals(new PriceUpdate(109, GBP_USD, new BigDecimal("1.2486501"), new BigDecimal("1.2573561"),
+                new PriceUpdate(109, GBP_USD, new BigDecimal("1.2486501"), new BigDecimal("1.2573561"),
                         of(2020, 6, 1, 12, 01, 02).plus(100, MILLIS)),
-                priceUpdates.get(1));
 
-        assertEquals(new PriceUpdate(110, EUR_JPY, new BigDecimal("119.49039"), new BigDecimal("120.02991"),
-                        of(2020, 6, 1, 12, 01, 02).plus(110, MILLIS)),
-                priceUpdates.get(2));
+                new PriceUpdate(110, EUR_JPY, new BigDecimal("119.49039"), new BigDecimal("120.02991"),
+                        of(2020, 6, 1, 12, 01, 02).plus(110, MILLIS)))));
     }
 
-    @Test
-    @DisplayName("Should send send the latest prices.")
-    public void shouldSendTheLatestPricesIfOutOfOrder() {
-        // given
-        doNothing().when(httpComponent).pushPriceUpdate(priceUptadeCaptor.capture());
-        MarketListenerImpl marketListener = new MarketListenerImpl(new CsvParser(), httpComponent, new BigDecimal("0.001"));
-
-        // when
-        marketListener.onMessage("""
-                110, EUR/JPY, 119.61,119.91,01-06-2020 12:01:02:110
-                106, EUR/JPY, 1.1000,1.2000,01-06-2020 12:01:01:001
-                """);
-
-        // then
-        verify(httpComponent, times(1)).pushPriceUpdate(any());
-
-        assertEquals(new PriceUpdate(110, EUR_JPY, new BigDecimal("119.49039"), new BigDecimal("120.02991"),
-                        of(2020, 6, 1, 12, 01, 02).plus(110, MILLIS)),
-                priceUptadeCaptor.getValue());
-    }
 }
 

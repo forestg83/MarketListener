@@ -29,17 +29,14 @@ public class MarketListenerImpl implements MarketListener {
         List<PriceUpdate> priceUpdateList = csvParser.parseString(message);
 
         // sprawdzić czy wykonują się po kolei czy najpierw map wszystkich a potem forEach
-        priceUpdateList.stream()
-                // calculate commision
-                .map(x -> new PriceUpdate(
-                        x.id(),
-                        x.pair(),
-                        substractBidCommision(x.bid()),
-                        addAskCommision(x.ask()),
-                        x.timestamp())
-                )
-                // push update to HTTP clients
-                .forEach(httpComponent::pushPriceUpdate);
+        for (PriceUpdate pu : priceUpdateList) {
+            httpComponent.pushPriceUpdate(new PriceUpdate(
+                    pu.id(),
+                    pu.pair(),
+                    substractBidCommision(pu.bid()),
+                    addAskCommision(pu.ask()),
+                    pu.timestamp()));
+        }
     }
 
     private BigDecimal substractBidCommision(BigDecimal input) {

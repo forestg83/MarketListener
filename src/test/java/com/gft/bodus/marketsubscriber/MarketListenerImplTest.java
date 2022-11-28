@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.util.Collection;
+
 import static java.util.List.of;
 
 import static com.gft.bodus.marketsubscriber.model.MarketPair.EUR_JPY;
@@ -45,11 +46,11 @@ public class MarketListenerImplTest {
 
         // when
         marketListener.onMessage("""
-                106, EUR/USD, 1.1000,1.2000,01-06-2020 12:01:01:001
-                107, EUR/JPY, 119.60,119.90,01-06-2020 12:01:02:002
-                108, GBP/USD, 1.2500,1.2560,01-06-2020 12:01:02:002
-                109, GBP/USD, 1.2499,1.2561,01-06-2020 12:01:02:100
-                110, EUR/JPY, 119.61,119.91,01-06-2020 12:01:02:110
+                106, EUR/USD, 1.1000, 1.2000, 01-06-2020 12:01:01:001
+                107, EUR/JPY, 119.60, 119.90, 01-06-2020 12:01:02:002
+                108, GBP/USD, 1.2500, 1.2560, 01-06-2020 12:01:02:002
+                109, GBP/USD, 1.2499, 1.2561, 01-06-2020 12:01:02:100
+                110, EUR/JPY, 119.61, 119.91, 01-06-2020 12:01:02:110
                 """);
 
         // then
@@ -65,6 +66,28 @@ public class MarketListenerImplTest {
 
                 new PriceUpdate(110, EUR_JPY, new BigDecimal("119.49039"), new BigDecimal("120.02991"),
                         of(2020, 6, 1, 12, 01, 02).plus(110, MILLIS)))));
+    }
+
+    @Test
+    @DisplayName("Should omit outdated updates")
+    public void shouldOmitOutdatedUpdates() {
+        // given
+        MarketListenerImpl marketListener = new MarketListenerImpl(new CsvParser(), httpService, new BigDecimal("0.001"));
+
+        // when
+        marketListener.onMessage("""
+                110, EUR/JPY, 119.61, 119.91,01-06-2020 12:01:02:110
+                107, EUR/JPY, 119.60, 119.90,01-06-2020 12:01:02:002
+                """);
+
+        // then
+        Collection<PriceUpdate> publishedData = httpService.getAllPrices();
+        assertEquals(1, publishedData.size());
+        verify(httpService, times(2)).pushPriceUpdate(any(PriceUpdate.class));
+        assertTrue(publishedData.contains(
+                new PriceUpdate(110, EUR_JPY, new BigDecimal("119.49039"), new BigDecimal("120.02991"),
+                        of(2020, 6, 1, 12, 01, 02).plus(110, MILLIS))
+        ));
     }
 
 }

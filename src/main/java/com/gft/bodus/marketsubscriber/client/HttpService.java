@@ -18,7 +18,9 @@ public class HttpService {
     private ConcurrentHashMap<MarketPair, PriceUpdate> pricesMap = new ConcurrentHashMap<>(MarketPair.values().length);
 
     public void pushPriceUpdate(PriceUpdate priceUpdate) {
-        pricesMap.put(priceUpdate.pair(), priceUpdate);
+        pricesMap.merge(priceUpdate.pair(),
+                priceUpdate,
+                (pu1, pu2) -> pu1.id() > pu2.id() ? pu1 : pu2);
     }
 
     public Optional<PriceUpdate> getPriceUpdateByMarketPair(MarketPair pair) {

@@ -6,8 +6,6 @@ import com.gft.bodus.marketsubscriber.model.PriceUpdate;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.time.temporal.ChronoField;
 import java.util.List;
 
 import static com.gft.bodus.marketsubscriber.model.MarketPair.*;
